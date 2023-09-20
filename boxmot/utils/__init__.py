@@ -1,6 +1,6 @@
 # Mikel Broström 🔥 Yolo Tracking 🧾 AGPL-3.0 license
 
-import sys
+# import sys
 from pathlib import Path
 
 import numpy as np
@@ -13,10 +13,25 @@ WEIGHTS = ROOT / "examples" / "weights"
 REQUIREMENTS = ROOT / "requirements.txt"
 
 # global logger
-from loguru import logger
+# from loguru import logger
 
-logger.remove()
-logger.add(sys.stderr, colorize=True, level="INFO")
+# logger.remove()
+# logger.add(sys.stderr, colorize=True, level="INFO")
+
+
+# Fake logger
+class Logger:
+    def success(self, *args, **kwargs):
+        pass
+
+    def warning(self, *args, **kwargs):
+        pass
+
+    def debug(self, *args, **kwargs):
+        pass
+
+
+logger = Logger()
 
 
 class PerClassDecorator:

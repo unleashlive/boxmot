@@ -1,6 +1,7 @@
 # Mikel Broström 🔥 Yolo Tracking 🧾 AGPL-3.0 license
 
 from collections import deque
+from typing import Optional
 
 import numpy as np
 
@@ -11,6 +12,7 @@ from boxmot.trackers.botsort.basetrack import BaseTrack, TrackState
 from boxmot.utils.matching import (embedding_distance, fuse_score,
                                    iou_distance, linear_assignment)
 from boxmot.utils.ops import xywh2xyxy, xyxy2xywh
+from ultralytics.engine.results import Boxes
 
 
 class STrack(BaseTrack):
@@ -194,7 +196,7 @@ class BoTSORT(object):
         match_thresh: float = 0.8,
         proximity_thresh: float = 0.5,
         appearance_thresh: float = 0.25,
-        cmc_method: str = "sparseOptFlow",
+        cmc_method: Optional[str] = "sparseOptFlow",
         frame_rate=30,
     ):
         self.tracked_stracks = []  # type: list[STrack]
@@ -219,11 +221,14 @@ class BoTSORT(object):
 
         self.model = ReIDDetectMultiBackend(
             weights=model_weights, device=device, fp16=fp16
-        )
+        ) if model_weights else None
 
-        self.cmc = SparseOptFlow()
+        # Change: allow disabling CMC
+        self.cmc = SparseOptFlow() if cmc_method == "sparseOptFlow" else None
 
     def update(self, dets, img):
+        if isinstance(dets, Boxes):
+            dets = dets.data
         assert isinstance(
             dets, np.ndarray
         ), f"Unsupported 'dets' input format '{type(dets)}', valid format is np.ndarray"
@@ -257,7 +262,9 @@ class BoTSORT(object):
         dets_first = dets[first_mask]
 
         """Extract embeddings """
-        features_high = self.model.get_features(dets_first[:, 0:4], img)
+        features_high = [None for _ in dets_first]
+        if self.model:
+            features_high = self.model.get_features(dets_first[:, 0:4], img)
 
         if len(dets) > 0:
             """Detections"""
@@ -281,15 +288,19 @@ class BoTSORT(object):
         STrack.multi_predict(strack_pool)
 
         # Fix camera motion
-        warp = self.cmc.apply(img, dets_first)
-        STrack.multi_gmc(strack_pool, warp)
-        STrack.multi_gmc(unconfirmed, warp)
+        # Change: allow disabling CMC
+        if self.cmc:
+            warp = self.cmc.apply(img, dets_first)
+            STrack.multi_gmc(strack_pool, warp)
+            STrack.multi_gmc(unconfirmed, warp)
 
         # Associate with high score detection boxes
         ious_dists = iou_distance(strack_pool, detections)
         ious_dists_mask = ious_dists > self.proximity_thresh
 
-        emb_dists = embedding_distance(strack_pool, detections) / 2.0
+        emb_dists = np.zeros((len(strack_pool), len(detections)), dtype=np.float32)
+        if self.model:
+            emb_dists = embedding_distance(strack_pool, detections) / 2.0
         emb_dists[emb_dists > self.appearance_thresh] = 1.0
         emb_dists[ious_dists_mask] = 1.0
         dists = np.minimum(ious_dists, emb_dists)
@@ -345,7 +356,9 @@ class BoTSORT(object):
 
         ious_dists = fuse_score(ious_dists, detections)
 
-        emb_dists = embedding_distance(unconfirmed, detections) / 2.0
+        emb_dists = np.zeros((len(unconfirmed), len(detections)), dtype=np.float32)
+        if self.model:
+            emb_dists = embedding_distance(unconfirmed, detections) / 2.0
         emb_dists[emb_dists > self.appearance_thresh] = 1.0
         emb_dists[ious_dists_mask] = 1.0
         dists = np.minimum(ious_dists, emb_dists)

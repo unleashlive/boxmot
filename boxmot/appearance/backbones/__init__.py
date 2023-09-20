@@ -2,7 +2,7 @@
 
 from __future__ import absolute_import
 
-from boxmot.appearance.backbones.clip.make_model import make_model
+# from boxmot.appearance.backbones.clip.make_model import make_model
 from boxmot.appearance.backbones.hacnn import HACNN
 from boxmot.appearance.backbones.lmbn.lmbn_n import LMBN_n
 from boxmot.appearance.backbones.mlfn import mlfn
@@ -17,7 +17,7 @@ from boxmot.appearance.backbones.osnet_ain import (osnet_ain_x0_5,
                                                    osnet_ain_x1_0)
 from boxmot.appearance.backbones.resnet import resnet50, resnet101
 
-NR_CLASSES_DICT = {'market1501': 751, 'duke': 702, 'veri': 576, 'vehicleid': 576}
+NR_CLASSES_DICT = {'market': 751, 'market1501': 751, 'duke': 702, 'veri': 576, 'vehicleid': 576}
 
 
 __model_factory = {
@@ -39,7 +39,7 @@ __model_factory = {
     "osnet_ain_x0_5": osnet_ain_x0_5,
     "osnet_ain_x0_25": osnet_ain_x0_25,
     "lmbn_n": LMBN_n,
-    "clip": make_model,
+    # "clip": make_model,
 }
 
 
