@@ -192,12 +192,11 @@ class BoTSORT(object):
         track_high_thresh: float = 0.5,
         track_low_thresh: float = 0.1,
         new_track_thresh: float = 0.6,
-        track_buffer: int = 30,
+        max_time_lost: int = 30,
         match_thresh: float = 0.8,
         proximity_thresh: float = 0.5,
         appearance_thresh: float = 0.25,
-        cmc_method: Optional[str] = "sparseOptFlow",
-        frame_rate=30,
+        cmc_method: Optional[str] = None,
     ):
         self.tracked_stracks = []  # type: list[STrack]
         self.lost_stracks = []  # type: list[STrack]
@@ -211,11 +210,9 @@ class BoTSORT(object):
         self.new_track_thresh = new_track_thresh
         self.match_thresh = match_thresh
 
-        self.buffer_size = int(frame_rate / 30.0 * track_buffer)
-        self.max_time_lost = self.buffer_size
+        self.max_time_lost = max_time_lost
         self.kalman_filter = BotSortKalmanFilterAdapter()
 
-        # ReID module
         self.proximity_thresh = proximity_thresh
         self.appearance_thresh = appearance_thresh
 
