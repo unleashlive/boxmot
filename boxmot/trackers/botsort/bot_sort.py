@@ -1,7 +1,7 @@
 # Mikel Broström 🔥 Yolo Tracking 🧾 AGPL-3.0 license
 
 from collections import deque
-from typing import Optional
+from typing import List, Optional
 
 import numpy as np
 
@@ -196,7 +196,7 @@ class BoTSORT(object):
         match_thresh: float = 0.8,
         proximity_thresh: float = 0.5,
         appearance_thresh: float = 0.25,
-        cmc_method: Optional[str] = None,
+        cmc_method: Optional[str] = None
     ):
         self.tracked_stracks = []  # type: list[STrack]
         self.lost_stracks = []  # type: list[STrack]
@@ -220,12 +220,11 @@ class BoTSORT(object):
             weights=model_weights, device=device, fp16=fp16
         ) if model_weights else None
 
-        # Change: allow disabling CMC
+        # Allow disabling CMC
         self.cmc = SparseOptFlow() if cmc_method == "sparseOptFlow" else None
 
-    def update(self, dets, img):
-        if isinstance(dets, Boxes):
-            dets = dets.data
+    def update(self, dets: Boxes, img):
+        dets = dets.data
         assert isinstance(
             dets, np.ndarray
         ), f"Unsupported 'dets' input format '{type(dets)}', valid format is np.ndarray"
@@ -409,7 +408,7 @@ class BoTSORT(object):
             output.append(t.det_ind)
             outputs.append(output)
 
-        outputs = np.asarray(outputs)
+        outputs = np.asarray(outputs).reshape(-1, 8)
         return outputs
 
 
