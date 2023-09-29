@@ -250,11 +250,11 @@ class BoTSORT(object):
         confs = dets[:, 4]
 
         # find second round association detections
-        second_mask = np.logical_or(confs > self.track_low_thresh, confs < self.track_high_thresh)
+        second_mask = np.logical_and(confs >= self.track_low_thresh, confs < self.track_high_thresh)
         dets_second = dets[second_mask]
 
         # find first round association detections
-        first_mask = confs > self.track_high_thresh
+        first_mask = confs >= self.track_high_thresh
         dets_first = dets[first_mask]
 
         """Extract embeddings """
@@ -294,7 +294,7 @@ class BoTSORT(object):
         ious_dists = iou_distance(strack_pool, detections)
         ious_dists_mask = ious_dists > self.proximity_thresh
 
-        emb_dists = np.zeros((len(strack_pool), len(detections)), dtype=np.float32)
+        emb_dists = np.ones((len(strack_pool), len(detections)), dtype=np.float32)
         if self.model:
             emb_dists = embedding_distance(strack_pool, detections) / 2.0
         emb_dists[emb_dists > self.appearance_thresh] = 1.0
@@ -352,7 +352,7 @@ class BoTSORT(object):
 
         ious_dists = fuse_score(ious_dists, detections)
 
-        emb_dists = np.zeros((len(unconfirmed), len(detections)), dtype=np.float32)
+        emb_dists = np.ones((len(unconfirmed), len(detections)), dtype=np.float32)
         if self.model:
             emb_dists = embedding_distance(unconfirmed, detections) / 2.0
         emb_dists[emb_dists > self.appearance_thresh] = 1.0
