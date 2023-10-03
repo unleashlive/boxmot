@@ -9,8 +9,8 @@ from boxmot.appearance.reid_multibackend import ReIDDetectMultiBackend
 from boxmot.motion.cmc.sof import SparseOptFlow
 from boxmot.motion.kalman_filters.adapters import BotSortKalmanFilterAdapter
 from boxmot.trackers.botsort.basetrack import BaseTrack, TrackState
-from boxmot.utils.matching import (embedding_distance, fuse_score,
-                                   iou_distance, linear_assignment)
+from boxmot.utils.matching import (bbox_ious, embedding_distance, fuse_score,
+                                   iou_distance, ious, linear_assignment)
 from boxmot.utils.ops import xywh2xyxy, xyxy2xywh
 from ultralytics.engine.results import Boxes
 
@@ -371,7 +371,9 @@ class BoTSORT(object):
         """ Step 4: Init new stracks"""
         for inew in u_detection:
             track = detections[inew]
-            if track.score < self.new_track_thresh:
+            # if track.score:
+            if track.score < self.new_track_thresh or \
+               np.any(bbox_ious(track.xyxy[None], np.array([t.xyxy for t in activated_starcks])) > self.proximity_thresh):
                 continue
 
             track.activate(self.kalman_filter, self.frame_id)
