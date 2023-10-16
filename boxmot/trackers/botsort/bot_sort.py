@@ -91,8 +91,9 @@ class STrack(BaseTrack):
                 multi_mean, multi_covariance
             )
             for i, (mean, cov) in enumerate(zip(multi_mean, multi_covariance)):
-                stracks[i].mean = mean
-                stracks[i].covariance = cov
+                if stracks[i].state not in {TrackState.Lost, TrackState.LongLost}:
+                    stracks[i].mean = mean
+                    stracks[i].covariance = cov
 
     @staticmethod
     def multi_gmc(stracks, H=np.eye(2, 3)):
