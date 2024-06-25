@@ -83,17 +83,17 @@ class STrack(BaseTrack):
         if len(stracks) > 0:
             multi_mean = np.asarray([st.mean.copy() for st in stracks])
             multi_covariance = np.asarray([st.covariance for st in stracks])
-            for i, st in enumerate(stracks):
-                if st.state != TrackState.Tracked:
-                    multi_mean[i][6] = 0
-                    multi_mean[i][7] = 0
+            # for i, st in enumerate(stracks):
+            #     if st.state != TrackState.Tracked:
+            #         multi_mean[i][6] = 0
+            #         multi_mean[i][7] = 0
             multi_mean, multi_covariance = STrack.shared_kalman.multi_predict(
                 multi_mean, multi_covariance
             )
             for i, (mean, cov) in enumerate(zip(multi_mean, multi_covariance)):
-                if stracks[i].state not in {TrackState.Lost, TrackState.LongLost}:
-                    stracks[i].mean = mean
-                    stracks[i].covariance = cov
+                # if stracks[i].state not in {TrackState.Lost, TrackState.LongLost}:
+                stracks[i].mean = mean
+                stracks[i].covariance = cov
 
     @staticmethod
     def multi_gmc(stracks, H=np.eye(2, 3)):
