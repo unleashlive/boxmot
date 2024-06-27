@@ -195,6 +195,7 @@ class BoTSORT(object):
         new_track_thresh: float = 0.6,
         max_time_lost: int = 30,
         match_thresh: float = 0.8,
+        match_thresh_second: float = 0.5,
         proximity_thresh: float = 0.5,
         appearance_thresh: float = 0.25,
         cmc_method: Optional[str] = None
@@ -210,6 +211,7 @@ class BoTSORT(object):
         self.track_low_thresh = track_low_thresh
         self.new_track_thresh = new_track_thresh
         self.match_thresh = match_thresh
+        self.match_thresh_second = match_thresh_second
 
         self.max_time_lost = max_time_lost
         self.kalman_filter = BotSortKalmanFilterAdapter()
@@ -329,7 +331,7 @@ class BoTSORT(object):
             if strack_pool[i].state == TrackState.Tracked
         ]
         dists = iou_distance(r_tracked_stracks, detections_second)
-        matches, u_track, u_detection_second = linear_assignment(dists, thresh=0.5)
+        matches, u_track, u_detection_second = linear_assignment(dists, thresh=self.match_thresh_second)
         for itracked, idet in matches:
             track = r_tracked_stracks[itracked]
             det = detections_second[idet]
