@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 
 setup(
     name='boxmot',  # name of pypi package
-    version='10.0.45.1',  # version of pypi package
+    version='10.0.45.2',  # version of pypi package
     python_requires='>=3.8',
     license='AGPL-3.0',
     description=('SOTA tracking methods for detection, segmentation and pose estimation models.'),

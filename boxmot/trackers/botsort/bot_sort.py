@@ -18,7 +18,7 @@ from ultralytics.engine.results import Boxes
 class STrack(BaseTrack):
     shared_kalman = BotSortKalmanFilterAdapter()
 
-    def __init__(self, det, feat=None, feat_history=50):
+    def __init__(self, det, feat=None, feat_history=50, kalman_output=False):
         # wait activate
         self.xywh = xyxy2xywh(det[0:4])  # (x1, y1, x2, y2) --> (xc, yc, w, h)
         self.score = det[4]
@@ -38,6 +38,8 @@ class STrack(BaseTrack):
             self.update_features(feat)
         self.features = deque([], maxlen=feat_history)
         self.alpha = 0.9
+
+        self.kalman_output = kalman_output
 
     def update_features(self, feat):
         feat /= np.linalg.norm(feat)
@@ -159,6 +161,7 @@ class STrack(BaseTrack):
         self.mean, self.covariance = self.kalman_filter.update(
             self.mean, self.covariance, new_track.xywh
         )
+        self.xywh = new_track.xywh
 
         if new_track.curr_feat is not None:
             self.update_features(new_track.curr_feat)
@@ -176,10 +179,13 @@ class STrack(BaseTrack):
         """Convert bounding box to format `(min x, min y, max x, max y)`, i.e.,
         `(top left, bottom right)`.
         """
-        if self.mean is None:
-            ret = self.xywh.copy()  # (xc, yc, w, h)
+        if self.kalman_output:
+            if self.mean is None:
+                ret = self.xywh.copy()  # (xc, yc, w, h)
+            else:
+                ret = self.mean[:4].copy()  # kf (xc, yc, w, h)
         else:
-            ret = self.mean[:4].copy()  # kf (xc, yc, w, h)
+            ret = self.xywh.copy()
         ret = xywh2xyxy(ret)
         return ret
 
@@ -196,9 +202,11 @@ class BoTSORT(object):
         max_time_lost: int = 30,
         match_thresh: float = 0.8,
         match_thresh_second: float = 0.5,
+        match_thresh_third: float = 0.7,
         proximity_thresh: float = 0.5,
         appearance_thresh: float = 0.25,
-        cmc_method: Optional[str] = None
+        cmc_method: Optional[str] = None,
+        kalman_output: bool = False
     ):
         self.tracked_stracks = []  # type: list[STrack]
         self.lost_stracks = []  # type: list[STrack]
@@ -212,6 +220,7 @@ class BoTSORT(object):
         self.new_track_thresh = new_track_thresh
         self.match_thresh = match_thresh
         self.match_thresh_second = match_thresh_second
+        self.match_thresh_third = match_thresh_third
 
         self.max_time_lost = max_time_lost
         self.kalman_filter = BotSortKalmanFilterAdapter()
@@ -225,6 +234,9 @@ class BoTSORT(object):
 
         # Allow disabling CMC
         self.cmc = SparseOptFlow() if cmc_method == "sparseOptFlow" else None
+
+        # Using Kalman's output as result or the original detection box
+        self.kalman_output = kalman_output
 
     def update(self, dets: Boxes, img):
         dets = dets.data
@@ -267,7 +279,7 @@ class BoTSORT(object):
 
         if len(dets) > 0:
             """Detections"""
-            detections = [STrack(det, f) for (det, f) in zip(dets_first, features_high)]
+            detections = [STrack(det, f, kalman_output=self.kalman_output) for (det, f) in zip(dets_first, features_high)]
         else:
             detections = []
 
@@ -362,7 +374,7 @@ class BoTSORT(object):
         emb_dists[ious_dists_mask] = 1.0
         dists = np.minimum(ious_dists, emb_dists)
 
-        matches, u_unconfirmed, u_detection = linear_assignment(dists, thresh=0.7)
+        matches, u_unconfirmed, u_detection = linear_assignment(dists, thresh=self.match_thresh_third)
         for itracked, idet in matches:
             unconfirmed[itracked].update(detections[idet], self.frame_id)
             activated_starcks.append(unconfirmed[itracked])
